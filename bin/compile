@@ -15,6 +15,7 @@ source /dev/stdin <<< "$(curl -s --retry 3 https://lang-common.s3.amazonaws.com/
 BUILD_DIR=$1
 CACHE_DIR=$2
 BUILDPACK_DIR="$(dirname $(dirname "$0"))"
+INSTALL_DIR="/app/.heroku"
 HEROKU_CLI_URL="https://cli-assets.heroku.com/channels/stable/heroku-linux-x64.tar.xz"
 
 puts_step "Fetching and vendoring Heroku CLI into slug"
@@ -38,6 +39,17 @@ export HEROKU_SKIP_ANALYTICS=1
 export HEROKU_DISABLE_AUTOUPDATE=1
 EOF
 chmod +x "$BUILD_DIR/.profile.d/heroku-cli.sh"
+
+if [[ "${BUILD_DIR}" != /app ]]; then
+  mkdir -p /app
+  ln -nsf "${BUILD_DIR}/.heroku" "${INSTALL_DIR}"
+fi
+
+cat > "${BUILDPACK_DIR}/export" <<'EXPORT'
+export PATH="/app/.heroku/bin:${PATH}"
+export HEROKU_SKIP_ANALYTICS=1
+export HEROKU_DISABLE_AUTOUPDATE=1
+EXPORT
 
 "$BUILD_DIR/.heroku/bin/heroku" version
 puts_step "Heroku CLI installation done"
